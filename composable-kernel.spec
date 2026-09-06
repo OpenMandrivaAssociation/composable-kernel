@@ -20,11 +20,6 @@ BuildRequires:	rocm-hip-devel
 BuildRequires:	clang >= %{rocm_llvm_maj_ver}
 BuildRequires:	clang-tools
 
-# Fat HIP: disable LTO
-%define _disable_lto 1
-
-ExclusiveArch:	%{x86_64} %{aarch64}
-
 %description
 Composable Kernel (CK) is a header + device-library collection of
 GPU GEMM, attention, and convolution primitives. Packaged so
