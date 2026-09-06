@@ -2,6 +2,9 @@
 # Torch/xformers still vendor their own CK pins; this package is
 # for consumers that can use a distro CK.
 
+# Fat HIP device instances + global -flto stalls in ld.lld the same way RCCL does.
+%define _disable_lto 1
+
 Name:		composable-kernel
 Version:	10.0.0
 Release:	1
@@ -10,6 +13,8 @@ License:	MIT
 Group:		Development/C++
 URL:		https://github.com/ROCm/rocm-libraries
 Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.0/composablekernel.tar.gz#/composablekernel-%{version}.tar.gz
+# Clang 21+ raw-buffer builtins return unsigned ext_vector types
+Patch0:		0001-clang23-raw-buffer-unsigned-vectors.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake
@@ -47,14 +52,18 @@ export TMPDIR=%{_builddir}/.ck-tmp
 mkdir -p "$TMPDIR"
 CXXFLAGS=$(printf '%s' "%{optflags}" | sed -E 's/-mfpmath=[^ ]+//g; s/ -m[a-z0-9+.=]+//g')
 export CXXFLAGS
-%cmake %{rocm_cmake_fhs} %{rocm_cmake_gpu_targets} \
+# RDNA3/4 only. %{rocm_cmake_gpu_targets} also injects gfx803 (no SGPR table)
+# and CDNA, which multiplies device-instance compile time.
+%cmake %{rocm_cmake_fhs} \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_CXX_COMPILER=hipcc \
 	-DCMAKE_HIP_COMPILER=clang++ \
 	-DCMAKE_HIP_FLAGS="--rocm-path=%{_prefix} --rocm-device-lib-path=%{_libdir}/amdgcn/bitcode" \
-	-DCMAKE_HIP_ARCHITECTURES="%{rocm_gpu_targets}" \
+	-DCMAKE_HIP_ARCHITECTURES="gfx1100;gfx1101;gfx1200;gfx1201" \
+	-DGPU_TARGETS="gfx1100;gfx1101;gfx1200;gfx1201" \
 	-DCMAKE_CXX_FLAGS="$CXXFLAGS" \
 	-DBUILD_TESTING=OFF \
+	-DBUILD_DEV=OFF \
 	-DBUILD_CK_EXAMPLES=OFF \
 	-DBUILD_CK_TUTORIALS=OFF \
 	-DBUILD_CK_TILE_ENGINE_TESTS=OFF \
