@@ -1,13 +1,11 @@
 Do not pass -amdgpu-early-inline-all / -amdgpu-function-calls=false.
 
 LLVM issue 86332: those flags inflate AMDGPU codegen memory ~8x.
-CK device instances already OOM clang (Killed) on a 62 GiB builder.
-Same strip we applied to xformers' vendored CK.
+Same strip we applied to xformers vendored CK.
 
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -528,11 +528,8 @@
- if(NOT WIN32 AND check-coerce AND ${hip_VERSION_FLAT} GREATER 600241132)
+@@ -528,11 +528,6 @@
     message(STATUS "Adding the amdgpu-coerce-illegal-types=1")
     add_compile_options("SHELL: -mllvm -amdgpu-coerce-illegal-types=1")
  endif()
@@ -19,4 +17,3 @@ Same strip we applied to xformers' vendored CK.
  #
  # Seperate linking jobs from compiling
  # Too many concurrent linking jobs can break the build
- # Copied from LLVM
