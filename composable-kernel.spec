@@ -4,6 +4,8 @@
 
 # Fat HIP device instances + global -flto stalls in ld.lld the same way RCCL does.
 %define _disable_lto 1
+# One CK instance TU can be multi-GB; nproc hipccs OOM the builder.
+%global _smp_mflags -j2
 
 Name:		composable-kernel
 Version:	10.0.0
@@ -15,6 +17,8 @@ URL:		https://github.com/ROCm/rocm-libraries
 Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.0/composablekernel.tar.gz#/composablekernel-%{version}.tar.gz
 # Clang 21+ raw-buffer builtins return unsigned ext_vector types
 Patch0:		0001-clang23-raw-buffer-unsigned-vectors.patch
+# LLVM 86332: -amdgpu-early-inline-all=true ~8x device-codegen RAM
+Patch1:		0002-drop-amdgpu-early-inline-all.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake
@@ -70,6 +74,7 @@ export CXXFLAGS
 	-DBUILD_CK_TILE_FMHA_TESTS=OFF \
 	-DBUILD_CK_PROFILER=OFF \
 	-DENABLE_CLANG_CPP_CHECKS=OFF \
+	-DCK_PARALLEL_LINK_JOBS=1 \
 	-DDISABLE_CK_LIB=OFF \
 	-DROCM_PATH=%{_prefix} \
 	-DCMAKE_PREFIX_PATH=%{_prefix} \
