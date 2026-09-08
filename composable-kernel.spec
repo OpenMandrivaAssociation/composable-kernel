@@ -19,6 +19,8 @@ Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.0/c
 Patch0:		0001-clang23-raw-buffer-unsigned-vectors.patch
 # LLVM 86332: -amdgpu-early-inline-all=true ~8x device-codegen RAM
 Patch1:		0002-drop-amdgpu-early-inline-all.patch
+# LLVM 23+: bf16 WMMA builtins take short ext_vectors
+Patch2:		0003-llvm23-bf16-wmma-short-vectors.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake

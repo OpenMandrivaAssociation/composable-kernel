@@ -1,0 +1,133 @@
+LLVM 23 bf16 WMMA builtins take short ext_vectors.
+
+Same bit pattern as __bf16. Matches ggml 0001-llvm23-bf16-wmma-short-vectors.
+
+--- a/include/ck/utility/amd_wmma.hpp	2026-08-26 11:34:26.477105400 +0200
++++ b/include/ck/utility/amd_wmma.hpp	2026-09-08 03:20:25.952536884 +0200
+@@ -24,6 +24,10 @@
+ #define __gfx125__
+ #endif
+ 
++// LLVM 23+: bf16 WMMA builtins take short ext_vectors (same bits as __bf16).
++using wmma_i16x16_t = short __attribute__((ext_vector_type(16)));
++using wmma_i16x8_t  = short __attribute__((ext_vector_type(8)));
++
+ /********************************WAVE32 MODE***********************************************/
+ 
+ // src: fp16, dst: fp32
+@@ -64,7 +68,9 @@
+ #if defined(__gfx11__)
+         reg_c.template AsType<float8_t>()(Number<0>{}) =
+             __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
+-                reg_a, reg_b, reg_c.template AsType<float8_t>()[Number<0>{}]);
++                bit_cast<wmma_i16x16_t>(reg_a),
++                bit_cast<wmma_i16x16_t>(reg_b),
++                reg_c.template AsType<float8_t>()[Number<0>{}]);
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -112,8 +118,11 @@
+         // true : D0.[16:31]= result
+ #if defined(__gfx11__)
+         reg_c.template AsType<bhalf16_t>()(Number<0>{}) =
+-            __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
+-                reg_a, reg_b, reg_c.template AsType<bhalf16_t>()[Number<0>{}], Opsel);
++            bit_cast<bhalf16_t>(__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
++                bit_cast<wmma_i16x16_t>(reg_a),
++                bit_cast<wmma_i16x16_t>(reg_b),
++                bit_cast<wmma_i16x16_t>(reg_c.template AsType<bhalf16_t>()[Number<0>{}]),
++                Opsel));
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -184,7 +193,9 @@
+ #if defined(__gfx11__)
+         reg_c.template AsType<float4_t>()(Number<0>{}) =
+             __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64(
+-                reg_a, reg_b, reg_c.template AsType<float4_t>()[Number<0>{}]);
++                bit_cast<wmma_i16x16_t>(reg_a),
++                bit_cast<wmma_i16x16_t>(reg_b),
++                reg_c.template AsType<float4_t>()[Number<0>{}]);
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -232,8 +243,11 @@
+         // true : D0.[16:31]= result
+ #if defined(__gfx11__)
+         reg_c.template AsType<bhalf8_t>()(Number<0>{}) =
+-            __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64(
+-                reg_a, reg_b, reg_c.template AsType<bhalf8_t>()[Number<0>{}], Opsel);
++            bit_cast<bhalf8_t>(__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64(
++                bit_cast<wmma_i16x16_t>(reg_a),
++                bit_cast<wmma_i16x16_t>(reg_b),
++                bit_cast<wmma_i16x8_t>(reg_c.template AsType<bhalf8_t>()[Number<0>{}]),
++                Opsel));
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -311,7 +325,9 @@
+ #if defined(__gfx120__)
+         reg_c.template AsType<float8_t>()(Number<0>{}) =
+             __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(
+-                reg_a, reg_b, reg_c.template AsType<float8_t>()[Number<0>{}]);
++                bit_cast<wmma_i16x8_t>(reg_a),
++                bit_cast<wmma_i16x8_t>(reg_b),
++                reg_c.template AsType<float8_t>()[Number<0>{}]);
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -483,8 +499,16 @@
+         // false: D0.[0:15] = result
+         // true : D0.[16:31]= result
+ #if defined(__gfx125__)
+-        reg_c.template AsType<bhalf8_t>()(Number<0>{}) = __builtin_amdgcn_wmma_bf16_16x16x32_bf16(
+-            0, reg_a, 0, reg_b, 0, reg_c.template AsType<bhalf8_t>()[Number<0>{}], false, false);
++        reg_c.template AsType<bhalf8_t>()(Number<0>{}) = bit_cast<bhalf8_t>(
++            __builtin_amdgcn_wmma_bf16_16x16x32_bf16(
++                0,
++                bit_cast<wmma_i16x16_t>(reg_a),
++                0,
++                bit_cast<wmma_i16x16_t>(reg_b),
++                0,
++                bit_cast<wmma_i16x8_t>(reg_c.template AsType<bhalf8_t>()[Number<0>{}]),
++                false,
++                false));
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -530,7 +554,14 @@
+     {
+ #if defined(__gfx125__)
+         reg_c.template AsType<float8_t>()(Number<0>{}) = __builtin_amdgcn_wmma_f32_16x16x32_bf16(
+-            0, reg_a, 0, reg_b, 0, reg_c.template AsType<float8_t>()[Number<0>{}], false, false);
++            0,
++            bit_cast<wmma_i16x16_t>(reg_a),
++            0,
++            bit_cast<wmma_i16x16_t>(reg_b),
++            0,
++            reg_c.template AsType<float8_t>()[Number<0>{}],
++            false,
++            false);
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
+@@ -551,9 +582,16 @@
+     Run(const bhalf16_t& reg_a, const bhalf16_t& reg_b, FloatC& reg_c, FloatD& reg_d)
+     {
+ #if defined(__gfx125__)
+-        reg_d
+-            .template AsType<bhalf8_t>()(Number<0>{}) = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(
+-            0, reg_a, 0, reg_b, 0, reg_c.template AsType<float8_t>()[Number<0>{}], false, false);
++        reg_d.template AsType<bhalf8_t>()(Number<0>{}) = bit_cast<bhalf8_t>(
++            __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(
++                0,
++                bit_cast<wmma_i16x16_t>(reg_a),
++                0,
++                bit_cast<wmma_i16x16_t>(reg_b),
++                0,
++                reg_c.template AsType<float8_t>()[Number<0>{}],
++                false,
++                false));
+ #else
+         ignore = reg_a;
+         ignore = reg_b;
