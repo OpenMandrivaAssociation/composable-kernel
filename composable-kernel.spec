@@ -1,4 +1,4 @@
-# System Composable Kernel. TheRock 10.0.
+# System Composable Kernel. TheRock 10.1.
 # Torch/xformers still vendor their own CK pins; this package is
 # for consumers that can use a distro CK.
 
@@ -8,19 +8,16 @@
 %global _smp_mflags -j2
 
 Name:		composable-kernel
-Version:	10.0.0
+Version:	10.1.0
 Release:	1
 Summary:	AMD Composable Kernel GPU math library
 License:	MIT
 Group:		Development/C++
 URL:		https://github.com/ROCm/rocm-libraries
-Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.0/composablekernel.tar.gz#/composablekernel-%{version}.tar.gz
-# Clang 21+ raw-buffer builtins return unsigned ext_vector types
-Patch0:		0001-clang23-raw-buffer-unsigned-vectors.patch
-# LLVM 86332: -amdgpu-early-inline-all=true ~8x device-codegen RAM
-Patch1:		0002-drop-amdgpu-early-inline-all.patch
-# LLVM 23+: bf16 WMMA builtins take short ext_vectors
-Patch2:		0003-llvm23-bf16-wmma-short-vectors.patch
+Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/composablekernel.tar.gz#/composablekernel-%{version}.tar.gz
+# LLVM 86332: -amdgpu-early-inline-all=true ~8x device-codegen RAM.
+# 10.1 already bit_casts raw-buffer loads and bf16 WMMA vectors.
+Patch0:		0002-drop-amdgpu-early-inline-all.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake
