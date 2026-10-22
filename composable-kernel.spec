@@ -89,6 +89,8 @@ export CXXFLAGS
 %files
 %license LICENSE
 %doc README.md
+# rocm-cmake installs a second copy. %license already owns LICENSE.
+%exclude %{_docdir}/composablekernel/LICENSE
 %{_libdir}/libdevice_*.so.*
 %{_libdir}/libutility.so.*
 
