@@ -1,16 +1,17 @@
 # System Composable Kernel. TheRock 10.1.
-# Torch/xformers still vendor their own CK pins; this package is
-# for consumers that can use a distro CK.
+# Torch/xformers still vendor their own CK pins. The distro library
+# is the hipTensor subset: contraction, reduction, and elementwise.
+# The full instance set is 2518 ninja steps and does not finish inside
+# the builder's Timeout(144000) (znver1 679230, aarch64 679232, still
+# in grouped conv). ninja_build ignores _smp_mflags.
 
 # Fat HIP device instances + global -flto stalls in ld.lld the same way RCCL does.
 %define _disable_lto 1
-# One CK instance TU can be multi-GB; nproc hipccs OOM the builder.
-%global _smp_mflags -j2
 
 Name:		composable-kernel
 Version:	10.1.0
 Release:	1
-Summary:	AMD Composable Kernel GPU math library
+Summary:	AMD Composable Kernel libraries used by hipTensor
 License:	MIT
 Group:		Development/C++
 URL:		https://github.com/ROCm/rocm-libraries
@@ -18,6 +19,8 @@ Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/c
 # LLVM 86332: -amdgpu-early-inline-all=true ~8x device-codegen RAM.
 # 10.1 already bit_casts raw-buffer loads and bf16 WMMA vectors.
 Patch0:		0002-drop-amdgpu-early-inline-all.patch
+# hipTensor's source filter also matches the mha "reduce compilation time" comment.
+Patch1:		0003-hiptensor-skip-mha.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake
@@ -30,9 +33,9 @@ BuildRequires:	clang >= %{rocm_llvm_maj_ver}
 BuildRequires:	clang-tools
 
 %description
-Composable Kernel (CK) is a header + device-library collection of
-GPU GEMM, attention, and convolution primitives. Packaged so
-consumers do not have to vendor three different CK snapshots.
+Composable Kernel (CK) headers and the contraction, reduction, and
+elementwise device libraries that hipTensor's CMake package requires.
+GEMM and convolution instances are not built.
 
 %package devel
 Summary:	Development files for %{name}
@@ -74,7 +77,7 @@ export CXXFLAGS
 	-DBUILD_CK_PROFILER=OFF \
 	-DENABLE_CLANG_CPP_CHECKS=OFF \
 	-DCK_PARALLEL_LINK_JOBS=1 \
-	-DDISABLE_CK_LIB=OFF \
+	-DHIPTENSOR_REQ_LIBS_ONLY=ON \
 	-DROCM_PATH=%{_prefix} \
 	-DCMAKE_PREFIX_PATH=%{_prefix} \
 	-G Ninja
@@ -86,11 +89,11 @@ export CXXFLAGS
 %files
 %license LICENSE
 %doc README.md
-%{_libdir}/libck_*.so.*
 %{_libdir}/libdevice_*.so.*
+%{_libdir}/libutility.so.*
 
 %files devel
 %{_includedir}/ck/
-%{_libdir}/libck_*.so
 %{_libdir}/libdevice_*.so
+%{_libdir}/libutility.so
 %{_libdir}/cmake/composable_kernel/

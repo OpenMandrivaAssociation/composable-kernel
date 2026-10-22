@@ -1,0 +1,26 @@
+Skip the mha instance directory in a hipTensor-only build.
+
+HIPTENSOR_REQ_LIBS_ONLY keeps sources whose CMakeLists match
+"contract|reduce|element". The mha lists match that only because a
+comment says "reduce compilation time". Entering the directory runs
+FMHA codegen at configure time and installs the ck_tile headers.
+hipTensor does not use either, and the RDNA targets in this package
+do not build the mha instances.
+
+--- a/library/src/tensor_operation_instance/gpu/CMakeLists.txt
++++ b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
+@@ -417,6 +417,14 @@ FOREACH(subdir_path ${dir_list})
+         if(required_pattern AND NOT "${cmake_instance}" MATCHES "${required_pattern}")
+             set(add_inst 0)
+         endif()
++        # "reduce" matches the mha comment "reduce compilation time".
++        if(HIPTENSOR_REQ_LIBS_ONLY AND NOT MIOPEN_REQ_LIBS_ONLY)
++            get_filename_component(_ht_dir "${subdir_path}" NAME)
++            if(_ht_dir STREQUAL "mha")
++                message(STATUS "Skipping mha instances for hipTensor")
++                set(add_inst 0)
++            endif()
++        endif()
+ 
+         if((add_inst EQUAL 1))
+             get_filename_component(target_dir ${subdir_path} NAME)
