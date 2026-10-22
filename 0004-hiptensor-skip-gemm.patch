@@ -1,0 +1,22 @@
+Do not compile GEMM instances a hipTensor build throws away.
+
+gemm*_reduce matches the hipTensor "reduce" filter, then the instance
+is classified as GEMM. device_gemm_operations is not created in that
+mode, so those objects are compiled and dropped. They are the TUs that
+SIGKILL'd ninja -j32 on x86_64 679920.
+
+--- a/library/src/tensor_operation_instance/gpu/CMakeLists.txt
++++ b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
+@@ -424,6 +424,12 @@
+                 message(STATUS "Skipping mha instances for hipTensor")
+                 set(add_inst 0)
+             endif()
++            # gemm*_reduce matches "reduce", then is filed under GEMM and
++            # discarded: device_gemm_operations is not built for hipTensor.
++            if("${cmake_instance}" MATCHES "gemm")
++                message(STATUS "Skipping GEMM instances for hipTensor")
++                set(add_inst 0)
++            endif()
+         endif()
+ 
+         if((add_inst EQUAL 1))

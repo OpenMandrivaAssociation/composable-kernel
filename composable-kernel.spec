@@ -7,6 +7,9 @@
 
 # Fat HIP device instances + global -flto stalls in ld.lld the same way RCCL does.
 %define _disable_lto 1
+# ninja_build uses RPM_BUILD_NCPUS. -j32 SIGKILL'd clang on znver1 679919
+# and x86_64 679920 while instantiating reduction and GEMM TUs.
+%global ck_ninja_jobs 4
 
 Name:		composable-kernel
 Version:	10.1.0
@@ -21,6 +24,8 @@ Source0:	https://github.com/ROCm/rocm-libraries/releases/download/therock-10.1/c
 Patch0:		0002-drop-amdgpu-early-inline-all.patch
 # hipTensor's source filter also matches the mha "reduce compilation time" comment.
 Patch1:		0003-hiptensor-skip-mha.patch
+# gemm*_reduce matches that filter and is then discarded with the GEMM library.
+Patch2:		0004-hiptensor-skip-gemm.patch
 
 BuildRequires:	rocm-rpm-macros
 BuildRequires:	cmake
@@ -81,6 +86,8 @@ export CXXFLAGS
 	-DROCM_PATH=%{_prefix} \
 	-DCMAKE_PREFIX_PATH=%{_prefix} \
 	-G Ninja
+RPM_BUILD_NCPUS=%{ck_ninja_jobs}
+export RPM_BUILD_NCPUS
 %ninja_build
 
 %install
